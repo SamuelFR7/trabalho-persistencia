@@ -1,6 +1,7 @@
 import "dotenv/config"
 import express from "express"
 import { redis } from "./db/redis/redis"
+import { CronJob } from "cron"
 
 const app = express()
 app.use(express.json())
@@ -14,6 +15,39 @@ redis.on("error", (err) => {
 redis.connect().then(() => {
   console.log("Connected to Redis")
 })
+
+const job = new CronJob("* * * * *", async () => {
+  console.log("Running the cron job to process movie counts")
+
+  try {
+    const keys = await redis.keys("*")
+
+    if (keys.length === 0) {
+      console.log("No movies found in Redis")
+      return
+    }
+
+    const counts = await redis.mGet(keys)
+
+    const movieData = keys.map((key, index) => ({
+      movieId: key,
+      count: parseInt(counts[index] || "0", 10),
+    }))
+
+    console.log("Movies to update in MySQL: ", movieData)
+    // Implement incrementation in mysql
+
+    const pipeline = redis.multi()
+    movieData.forEach(({ movieId, count }) => {
+      pipeline.decrBy(movieId, count)
+    })
+    await pipeline.exec()
+  } catch (error) {
+    console.log(`Error running the cronjob: ${error}`)
+  }
+})
+
+job.start()
 
 app.post("/votar", async (req, res) => {
   const { id } = req.body as {
