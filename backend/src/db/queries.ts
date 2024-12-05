@@ -26,11 +26,11 @@ const queries = {
       WHERE id = ?;
     `,
   getVotesCount: `
-SELECT
-  SUM(f.votos) as count
-FROM
-  filme f;
-`,
+      SELECT
+      SUM(f.votos) as count
+      FROM
+      filme f;
+  `,
 }
 
 export default queries

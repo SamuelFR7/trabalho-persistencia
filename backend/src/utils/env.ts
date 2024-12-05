@@ -12,6 +12,7 @@ const envSchema = z.object({
   R2_BUCKET_NAME: z.string(),
   R2_ENDPOINT: z.string(),
   R2_PUBLIC_URL: z.string(),
+  REDIS_URL: z.string().url(),
   PORT: z.number().default(3000),
 })
 
