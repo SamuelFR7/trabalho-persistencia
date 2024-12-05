@@ -3,8 +3,39 @@ import sharp from "sharp"
 import { env } from "../src/utils/env"
 import pool from "../src/db/mysql"
 import queries from "../src/db/queries"
+import { Command } from "commander"
 
-const PAGES_LIMIT = 1
+const program = new Command()
+
+program
+  .option("-q, --quantity <number>", "Number of pages to fetch", (value) => {
+    const parsed = parseInt(value, 10)
+    if (isNaN(parsed) || parsed <= 0) {
+      throw new Error("The 'quantity' must be a positive number.")
+    }
+    return parsed
+  })
+  .option(
+    "-i, --initial <number>",
+    "Initial page to start fetching from",
+    (value) => {
+      const parsed = parseInt(value, 10)
+      if (isNaN(parsed) || parsed <= 0) {
+        throw new Error("The 'initial' must be a positive number.")
+      }
+      return parsed
+    }
+  )
+
+program.parse(process.argv)
+
+const options = program.opts<{
+  quantity: number
+  initial: number
+}>()
+
+const PAGES_QUANTITY = options.quantity
+const INITIAL_PAGE = options.initial
 
 const s3 = new S3({
   region: "auto",
@@ -30,7 +61,7 @@ type MovieData = {
 }
 
 async function fetchMovies(page: number, current: MovieData[] = []) {
-  if (page > PAGES_LIMIT) {
+  if (page >= PAGES_QUANTITY + INITIAL_PAGE) {
     return current
   }
 
@@ -113,7 +144,7 @@ async function insertMovieInDatabase(movie: MovieData, imageUrl?: string) {
 }
 
 async function processMovies() {
-  const movies = await fetchMovies(1)
+  const movies = await fetchMovies(INITIAL_PAGE)
 
   for (const movie of movies) {
     const fileName = await fetchAndUploadImage(movie)

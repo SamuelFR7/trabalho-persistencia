@@ -25,6 +25,7 @@
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.705.0",
+    "commander": "^12.1.0",
     "cors": "^2.8.5",
     "cron": "^3.2.1",
     "dotenv": "^16.4.7",

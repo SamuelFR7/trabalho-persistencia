@@ -47,7 +47,7 @@ export async function rankingHandler(_req: Request, res: Response) {
     votes: votes.count,
   }
 
-  await redis.set("ranking", JSON.stringify(data), { EX: 120 })
+  await redis.set("ranking", JSON.stringify(data), { EX: 60 })
 
   res.status(200).json(data)
   return
