@@ -3,6 +3,6 @@ import { votosHandler } from "../controllers/votos-controller"
 
 const votosRouter = Router()
 
-votosRouter.get("/votar", votosHandler)
+votosRouter.post("/votar", votosHandler)
 
 export default votosRouter
