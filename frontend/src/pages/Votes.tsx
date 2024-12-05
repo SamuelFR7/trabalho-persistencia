@@ -59,9 +59,7 @@ function MovieListing({ movie }: MovieListingProps) {
       </div>
       <img
         src={movie.imagemUrl}
-        width={256}
-        height={256}
-        className="animate-fade-in"
+        className="animate-fade-in h-[384px] max-w-full aspect-[2/3]"
       />
       <Form method="POST">
         <input name="id" type="hidden" value={movie.id} />
