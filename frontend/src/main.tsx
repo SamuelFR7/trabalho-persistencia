@@ -5,7 +5,7 @@ import Votes, {
   loader as votesLoader,
   action as votesAction,
 } from "./pages/Votes"
-import Ranking from "./pages/Ranking"
+import Ranking, { loader as rankingLoader } from "./pages/Ranking"
 
 const router = createBrowserRouter([
   {
@@ -17,6 +17,7 @@ const router = createBrowserRouter([
   {
     path: "/ranking",
     element: <Ranking />,
+    loader: rankingLoader,
   },
 ])
 

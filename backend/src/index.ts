@@ -140,14 +140,14 @@ app.get("/filmes-aleatorios", async (_req, res) => {
   const [count] = await pool.query<Count[]>(queries.getFilmesCount)
   const quantidadeDeFilmes = count[0]?.count
   if (!quantidadeDeFilmes) {
-    res.status(404).send({ message: "Could not get movies count" })
+    res.status(404).json({ message: "Could not get movies count" })
     return
   }
 
   const [first, second] = generateTwoRandomNumbers(quantidadeDeFilmes)
 
   if (!first || !second) {
-    res.status(500).send({ message: "Internal server error" })
+    res.status(500).json({ message: "Internal server error" })
     return
   }
 
@@ -166,6 +166,43 @@ app.get("/filmes-aleatorios", async (_req, res) => {
   }
 
   res.status(200).json([firstMovie, secondMovie])
+  return
+})
+
+app.get("/ranking", async (_req, res) => {
+  const rankingFromCache = await redis.get("ranking")
+
+  if (rankingFromCache) {
+    res.status(200).json(JSON.parse(rankingFromCache))
+    return
+  }
+
+  const [votesCount] = await pool.query<Count[]>(queries.getVotesCount)
+
+  const [votes] = votesCount
+
+  if (!votes) {
+    res.status(500).json({ message: "Internal server error" })
+    return
+  }
+
+  const [rankingResult] = await pool.query<Movie[]>(queries.getTop100Filmes)
+
+  const ranking = rankingResult.map((movie) => ({
+    id: movie.id,
+    titulo: movie.titulo,
+    imagemUrl: `${env.R2_PUBLIC_URL}/${movie.imagemUrl}`,
+    votos: movie.votos,
+  }))
+
+  const data = {
+    ranking,
+    votes: votes.count,
+  }
+
+  await redis.set("ranking", JSON.stringify(data), { EX: 120 })
+
+  res.status(200).json(data)
   return
 })
 

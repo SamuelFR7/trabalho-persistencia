@@ -25,6 +25,12 @@ const queries = {
       SET votos = votos + ?
       WHERE id = ?;
     `,
+  getVotesCount: `
+SELECT
+  SUM(f.votos) as count
+FROM
+  filme f;
+`,
 }
 
 export default queries

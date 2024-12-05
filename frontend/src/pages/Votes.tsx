@@ -1,4 +1,4 @@
-import { ActionFunctionArgs, Form, useLoaderData } from "react-router"
+import { ActionFunctionArgs, Form, Link, useLoaderData } from "react-router"
 
 type MovieData = {
   id: number
@@ -27,7 +27,7 @@ export default function Votes() {
   const data = useLoaderData<typeof loader>()
 
   return (
-    <div className="h-screen w-screen flex flex-col justify-center gap-20 items-center relative">
+    <div className="h-screen w-screen flex flex-col justify-between items-center relative">
       <div className="text-2xl text-center pt-8">
         Qual filme você gosta mais?
       </div>
@@ -36,6 +36,9 @@ export default function Votes() {
         <div className="p-8 italic text-xl">{"ou"}</div>
         <MovieListing movie={data[1]} vote={() => console.log(`voto 2`)} />
         <div className="p-2" />
+      </div>
+      <div className="w-full text-xl text-center pb-2">
+        <Link to="/ranking">Ranking</Link>
       </div>
     </div>
   )
