@@ -1,4 +1,5 @@
 import { S3 } from "@aws-sdk/client-s3"
+import sharp from "sharp"
 import { env } from "../src/utils/env"
 import pool from "../src/db/mysql"
 import queries from "../src/db/queries"
@@ -90,7 +91,12 @@ async function fetchAndUploadImage(movie: MovieData) {
   const buffer = new Uint8Array(arrayBuffer)
   const fileName = `${movie.id}-${movie.title.replace(/[^a-z0-9]/gi, "_")}.jpg`
 
-  await uploadToR2(fileName, buffer)
+  const compressedBuffer = await sharp(buffer)
+    .resize(800)
+    .jpeg({ quality: 80 })
+    .toBuffer()
+
+  await uploadToR2(fileName, compressedBuffer)
   return fileName
 }
 
