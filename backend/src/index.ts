@@ -69,4 +69,54 @@ app.post("/votar", async (req, res) => {
   }
 })
 
+const fakeData = [
+  { title: "Filme 1 falso", imagemUrl: "http://imagem-falsa-1", id: 1 },
+  {
+    title: "Filme 2 falso",
+    imagemUrl: "http://imagem-falsa-2",
+    id: 2,
+  },
+]
+
+function generateTwoRandomNumbers(moviesQtd: number) {
+  if (moviesQtd < 2) {
+    throw new Error(
+      "moviesQtd must be at least 2 to generate two different numbers."
+    )
+  }
+
+  const first = Math.floor(Math.random() * moviesQtd) + 1
+  let second: number
+
+  do {
+    second = Math.floor(Math.random() * moviesQtd) + 1
+  } while (second === first)
+
+  return [first, second]
+}
+
+app.get("/filmes-aleatorios", async (_req, res) => {
+  // Pegar do mysql
+  const quantidadeDeFilmes = fakeData.length
+
+  const [first, second] = generateTwoRandomNumbers(quantidadeDeFilmes)
+
+  const firstMovie = fakeData.find((movie) => movie.id === first)
+
+  if (!firstMovie) {
+    res.status(404).json({ message: "Movie not found" })
+    return
+  }
+
+  const secondMovie = fakeData.find((movie) => movie.id === second)
+
+  if (!secondMovie) {
+    res.status(404).json({ message: "Movie not found" })
+    return
+  }
+
+  res.status(200).json([firstMovie, secondMovie])
+  return
+})
+
 app.listen(PORT, () => console.log(`Server listening on port ${PORT}`))
