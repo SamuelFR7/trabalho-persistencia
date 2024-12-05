@@ -1,30 +1,16 @@
-import "dotenv/config"
 import { S3 } from "@aws-sdk/client-s3"
+import { env } from "../src/utils/env"
+import pool from "../src/db/mysql"
+import queries from "../src/db/queries"
 
-const PAGES_LIMIT = 5
-const API_KEY = process.env.TMDB_API_KEY!
-const R2_ACCESS_KEY_ID = process.env.R2_ACCESS_KEY_ID!
-const R2_SECRET_ACCESS_KEY = process.env.R2_SECRET_ACCESS_KEY!
-const R2_BUCKET_NAME = process.env.R2_BUCKET_NAME!
-const R2_ENDPOINT = process.env.R2_ENDPOINT!
-
-if (
-  !API_KEY ||
-  !R2_ACCESS_KEY_ID ||
-  !R2_SECRET_ACCESS_KEY ||
-  !R2_BUCKET_NAME ||
-  !R2_ENDPOINT
-) {
-  console.log("Environment variables for TMDB or R2 are missing")
-  process.exit(1)
-}
+const PAGES_LIMIT = 1
 
 const s3 = new S3({
   region: "auto",
-  endpoint: R2_ENDPOINT,
+  endpoint: env.R2_ENDPOINT,
   credentials: {
-    accessKeyId: R2_ACCESS_KEY_ID,
-    secretAccessKey: R2_SECRET_ACCESS_KEY,
+    accessKeyId: env.R2_ACCESS_KEY_ID,
+    secretAccessKey: env.R2_SECRET_ACCESS_KEY,
   },
 })
 
@@ -32,7 +18,7 @@ const tmdbOptions = {
   method: "GET",
   headers: {
     accept: "application/json",
-    Authorization: `Bearer ${API_KEY}`,
+    Authorization: `Bearer ${env.TMDB_API_KEY}`,
   },
 }
 
@@ -72,7 +58,7 @@ async function fetchMovies(page: number, current: MovieData[] = []) {
 async function uploadToR2(key: string, body: Uint8Array) {
   try {
     await s3.putObject({
-      Bucket: R2_BUCKET_NAME,
+      Bucket: env.R2_BUCKET_NAME,
       Key: key,
       Body: body,
       ContentType: "image/jpeg",
@@ -90,7 +76,7 @@ async function fetchAndUploadImage(movie: MovieData) {
   const response = await fetch(imageUrl, {
     method: "GET",
     headers: {
-      Authorization: `Bearer ${API_KEY}`,
+      Authorization: `Bearer ${env.TMDB_API_KEY}`,
     },
   })
 
@@ -105,16 +91,31 @@ async function fetchAndUploadImage(movie: MovieData) {
   const fileName = `${movie.id}-${movie.title.replace(/[^a-z0-9]/gi, "_")}.jpg`
 
   await uploadToR2(fileName, buffer)
+  return fileName
+}
+
+async function insertMovieInDatabase(movie: MovieData, imageUrl?: string) {
+  const connection = await pool.getConnection()
+  try {
+    await connection.query(queries.insertFilme, [movie.title, imageUrl])
+    console.log(`Movie ${movie.title} added into mysql`)
+  } catch (error) {
+    console.error(`Failed to insert movie: ${movie.title}`, error)
+  } finally {
+    connection.release()
+  }
 }
 
 async function processMovies() {
   const movies = await fetchMovies(1)
 
   for (const movie of movies) {
-    await fetchAndUploadImage(movie)
+    const fileName = await fetchAndUploadImage(movie)
+    await insertMovieInDatabase(movie, fileName)
   }
 
   console.log("All movies processed")
+  process.exit(0)
 }
 
 processMovies().catch((err) => console.error(`Unexpected error: ${err}`))

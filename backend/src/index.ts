@@ -3,6 +3,11 @@ import express from "express"
 import { redis } from "./db/redis/redis"
 import { CronJob } from "cron"
 import cors from "cors"
+import pool from "./db/mysql"
+import queries from "./db/queries"
+import type { RowDataPacket } from "mysql2"
+import { z } from "zod"
+import { env } from "./utils/env"
 
 const app = express()
 app.use(express.json())
@@ -22,7 +27,7 @@ const job = new CronJob("* * * * *", async () => {
   console.log("Running the cron job to process movie counts")
 
   try {
-    const keys = await redis.keys("*")
+    const keys = (await redis.keys("*")).filter((key) => key !== "ranking")
 
     if (keys.length === 0) {
       console.log("No movies found in Redis")
@@ -31,19 +36,32 @@ const job = new CronJob("* * * * *", async () => {
 
     const counts = await redis.mGet(keys)
 
-    const movieData = keys.map((key, index) => ({
-      movieId: key,
-      count: parseInt(counts[index] || "0", 10),
-    }))
+    const movieData = keys
+      .map((key, index) => ({
+        movieId: key,
+        count: parseInt(counts[index] || "0", 10),
+      }))
+      .filter(({ count }) => count > 0)
+
+    if (movieData.length === 0) {
+      console.log("No movies with non-zero counts to process")
+      return
+    }
 
     console.log("Movies to update in MySQL: ", movieData)
-    // Implement incrementation in mysql
+    await Promise.all(
+      movieData.map(({ movieId, count }) => {
+        pool.execute(queries.incrementVoto, [movieId, count])
+      })
+    )
 
     const pipeline = redis.multi()
     movieData.forEach(({ movieId, count }) => {
       pipeline.decrBy(movieId, count)
     })
     await pipeline.exec()
+
+    console.log("Cron job completed successfully")
   } catch (error) {
     console.log(`Error running the cronjob: ${error}`)
   }
@@ -51,40 +69,29 @@ const job = new CronJob("* * * * *", async () => {
 
 job.start()
 
-app.post("/votar", async (req, res) => {
-  const { id } = req.body as {
-    id: number
-  }
+const bodySchema = z.object({
+  id: z.coerce.number(),
+})
 
-  if (!id || typeof id !== "string") {
-    res.status(400).json({ error: "movieId must be a non-empty string" })
+app.post("/votar", async (req, res) => {
+  const { error, data } = bodySchema.safeParse(req.body)
+
+  if (error) {
+    res.status(422).json({ error: error.format() })
     return
   }
 
-  try {
-    const newCount = await redis.incr(id)
+  const { id } = data
 
-    res.status(200).json({ movieId: parseInt(id), count: newCount })
+  try {
+    const newCount = await redis.incr(String(id))
+
+    res.status(200).json({ movieId: id, count: newCount })
   } catch (error) {
     console.log(error)
     res.status(500).json({ error: "Internal server error" })
   }
 })
-
-const fakeData = [
-  {
-    titulo: "Um corpo que cai",
-    imagemUrl:
-      "https://i.pinimg.com/originals/28/07/79/280779b8a1ca10ffc7269846c9bea474.jpg",
-    id: 1,
-  },
-  {
-    titulo: "A viagem de chihiro",
-    imagemUrl:
-      "https://m.media-amazon.com/images/I/71E4cV914GL._AC_UF894,1000_QL80_.jpg",
-    id: 2,
-  },
-]
 
 function generateTwoRandomNumbers(moviesQtd: number) {
   if (moviesQtd < 2) {
@@ -103,20 +110,55 @@ function generateTwoRandomNumbers(moviesQtd: number) {
   return [first, second]
 }
 
+interface Count extends RowDataPacket {
+  count: number
+}
+
+interface Movie extends RowDataPacket {
+  id: number
+  titulo: string
+  imagemUrl: string
+  votos: number
+}
+
+async function getMovieFromDatabase(id: number) {
+  const [movies] = await pool.query<Movie[]>(queries.getFilmeById, [id])
+
+  const first = movies[0]
+
+  if (!first) return null
+
+  return {
+    id: first.id,
+    titulo: first.titulo,
+    imagemUrl: `${env.R2_PUBLIC_URL}/${first.imagemUrl}`,
+    votos: first.votos,
+  }
+}
+
 app.get("/filmes-aleatorios", async (_req, res) => {
-  // Pegar do mysql
-  const quantidadeDeFilmes = fakeData.length
+  const [count] = await pool.query<Count[]>(queries.getFilmesCount)
+  const quantidadeDeFilmes = count[0]?.count
+  if (!quantidadeDeFilmes) {
+    res.status(404).send({ message: "Could not get movies count" })
+    return
+  }
 
   const [first, second] = generateTwoRandomNumbers(quantidadeDeFilmes)
 
-  const firstMovie = fakeData.find((movie) => movie.id === first)
+  if (!first || !second) {
+    res.status(500).send({ message: "Internal server error" })
+    return
+  }
+
+  const firstMovie = await getMovieFromDatabase(first)
 
   if (!firstMovie) {
     res.status(404).json({ message: "Movie not found" })
     return
   }
 
-  const secondMovie = fakeData.find((movie) => movie.id === second)
+  const secondMovie = await getMovieFromDatabase(second)
 
   if (!secondMovie) {
     res.status(404).json({ message: "Movie not found" })

@@ -9,3 +9,16 @@ services:
     command: ["redis-server", "--appendonly", "yes"]
     restart: always
 
+  mysql:
+    image: mysql:8.0
+    container_name: mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: persistencia
+      MYSQL_DATABASE: persistencia
+      MYSQL_USER: persistencia
+      MYSQL_PASSWORD: persistencia
+    ports:
+      - "3306:3306"
+    volumes:
+      - ./db-data/mysql:/var/lib/mysql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql

@@ -1,13 +1,11 @@
-import mysql from 'mysql2/promise';
+import mysql from "mysql2/promise"
 
 const pool = mysql.createPool({
-    host: 'localhost',
-    user: 'root',
-    password: '', 
-    database: 'bancoatv',
-    waitForConnections: true,
-    connectionLimit: 10,
-    queueLimit: 0
-});
+  uri: process.env.DATABASE_URL!,
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0,
+})
 
-export default pool;
+export default pool
+

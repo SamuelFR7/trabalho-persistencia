@@ -33,7 +33,7 @@ export default function Votes() {
       </div>
       <div className="p-8 flex justify-between items-center max-w-2xl flex-col md:flex-row animate-fade-in">
         <MovieListing movie={data[0]} vote={() => console.log(`voto 1`)} />
-        <div className="p-8 italic text-xl">{"or"}</div>
+        <div className="p-8 italic text-xl">{"ou"}</div>
         <MovieListing movie={data[1]} vote={() => console.log(`voto 2`)} />
         <div className="p-2" />
       </div>

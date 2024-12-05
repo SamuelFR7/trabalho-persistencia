@@ -1,22 +1,31 @@
 const queries = {
-    
-    insertFilme: `
-        INSERT INTO Filme (titulo, imagemUrl, votos) 
-        VALUES (?, ?, ?);
+  insertFilme: `
+        INSERT INTO filme (titulo, imagemUrl) 
+        VALUES (?, ?);
     `,
 
-    getFilmeById: `
+  getFilmeById: `
         SELECT * 
-        FROM Filme 
+        FROM filme 
         WHERE id = ?;
     `,
 
-    getTop100Filmes: `
+  getTop100Filmes: `
         SELECT * 
-        FROM Filme 
+        FROM filme 
         ORDER BY votos DESC 
         LIMIT 100;
-    `
-};
+    `,
+  getFilmesCount: `
+      SELECT count(filme.id) AS count
+      FROM filme;
+    `,
+  incrementVoto: `
+      UPDATE filme
+      SET votos = votos + ?
+      WHERE id = ?;
+    `,
+}
 
-export default queries;
+export default queries
+

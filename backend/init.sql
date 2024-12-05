@@ -1,0 +1,6 @@
+CREATE TABLE filme (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  titulo VARCHAR(255) NOT NULL,
+  imagemUrl TEXT NOT NULL,
+  votos INT DEFAULT 0
+);
