@@ -51,7 +51,7 @@ const job = new CronJob("* * * * *", async () => {
     console.log("Movies to update in MySQL: ", movieData)
     await Promise.all(
       movieData.map(({ movieId, count }) => {
-        pool.execute(queries.incrementVoto, [movieId, count])
+        pool.execute(queries.incrementVoto, [count, movieId])
       })
     )
 
