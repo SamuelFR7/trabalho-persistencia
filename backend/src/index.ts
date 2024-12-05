@@ -2,9 +2,11 @@ import "dotenv/config"
 import express from "express"
 import { redis } from "./db/redis/redis"
 import { CronJob } from "cron"
+import cors from "cors"
 
 const app = express()
 app.use(express.json())
+app.use(cors())
 
 const PORT = process.env.PORT || 3000
 
@@ -54,15 +56,15 @@ app.post("/votar", async (req, res) => {
     id: number
   }
 
-  if (!id || typeof id !== "number") {
-    res.status(400).json({ error: "movieId must be a number" })
+  if (!id || typeof id !== "string") {
+    res.status(400).json({ error: "movieId must be a non-empty string" })
     return
   }
 
   try {
-    const newCount = await redis.incr(String(id))
+    const newCount = await redis.incr(id)
 
-    res.status(200).json({ movieId: id, count: newCount })
+    res.status(200).json({ movieId: parseInt(id), count: newCount })
   } catch (error) {
     console.log(error)
     res.status(500).json({ error: "Internal server error" })
@@ -70,10 +72,16 @@ app.post("/votar", async (req, res) => {
 })
 
 const fakeData = [
-  { title: "Filme 1 falso", imagemUrl: "http://imagem-falsa-1", id: 1 },
   {
-    title: "Filme 2 falso",
-    imagemUrl: "http://imagem-falsa-2",
+    titulo: "Um corpo que cai",
+    imagemUrl:
+      "https://i.pinimg.com/originals/28/07/79/280779b8a1ca10ffc7269846c9bea474.jpg",
+    id: 1,
+  },
+  {
+    titulo: "A viagem de chihiro",
+    imagemUrl:
+      "https://m.media-amazon.com/images/I/71E4cV914GL._AC_UF894,1000_QL80_.jpg",
     id: 2,
   },
 ]
