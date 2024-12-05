@@ -1,24 +1,10 @@
 import { ActionFunctionArgs, Form, Link, useLoaderData } from "react-router"
-
-type MovieData = {
-  id: number
-  titulo: string
-  imagemUrl: string
-}
+import { getFilmesAleatorios } from "../utils/http/get-filmes-aleatorios"
+import { MovieData } from "../utils/types"
+import { postVotar } from "../utils/http/post-votar"
 
 export async function loader() {
-  const response = await fetch("http://localhost:3000/filmes-aleatorios", {
-    method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-    },
-  })
-
-  if (!response.ok) {
-    throw new Error("Algo deu errado")
-  }
-
-  const data = (await response.json()) as MovieData[]
+  const data = await getFilmesAleatorios()
 
   return data
 }
@@ -32,9 +18,9 @@ export default function Votes() {
         Qual filme você gosta mais?
       </div>
       <div className="p-8 flex justify-between items-center max-w-2xl flex-col md:flex-row animate-fade-in">
-        <MovieListing movie={data[0]} vote={() => console.log(`voto 1`)} />
+        <MovieListing movie={data[0]} />
         <div className="p-8 italic text-xl">{"ou"}</div>
-        <MovieListing movie={data[1]} vote={() => console.log(`voto 2`)} />
+        <MovieListing movie={data[1]} />
         <div className="p-2" />
       </div>
       <div className="w-full text-xl text-center pb-2">
@@ -47,29 +33,22 @@ export default function Votes() {
 export async function action({ request }: ActionFunctionArgs) {
   const formData = await request.formData()
 
-  const id = formData.get("id")
+  const id = formData.get("id")?.toString()
 
-  const response = await fetch("http://localhost:3000/votar", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ id }),
-  })
-
-  if (!response.ok) {
-    throw new Error(`Erro ao votar`)
+  if (!id) {
+    throw new Error("Id is required")
   }
+
+  await postVotar({ id: parseInt(id) })
 
   return null
 }
 
 type MovieListingProps = {
   movie: MovieData
-  vote: () => void
 }
 
-function MovieListing({ movie, vote }: MovieListingProps) {
+function MovieListing({ movie }: MovieListingProps) {
   return (
     <div
       className="flex flex-col items-center transition-opacity space-y-4"
@@ -87,8 +66,8 @@ function MovieListing({ movie, vote }: MovieListingProps) {
       <Form method="POST">
         <input name="id" type="hidden" value={movie.id} />
         <button
+          type="submit"
           className="inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm font-medium rounded-full text-gray-700 bg-white hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-          onClick={vote}
         >
           Votar
         </button>

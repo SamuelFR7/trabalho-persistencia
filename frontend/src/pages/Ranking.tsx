@@ -1,28 +1,9 @@
 import { useLoaderData } from "react-router"
-
-type GetRankingResponse = {
-  ranking: {
-    id: number
-    titulo: string
-    imagemUrl: string
-    votos: number
-  }[]
-  votes: number
-}
+import { MovieData } from "../utils/types"
+import { getRanking } from "../utils/http/get-ranking"
 
 export async function loader() {
-  const response = await fetch("http://localhost:3000/ranking", {
-    method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-    },
-  })
-
-  if (!response.ok) {
-    throw new Error("Error on retrieving ranking")
-  }
-
-  const data = (await response.json()) as GetRankingResponse
+  const data = await getRanking()
 
   return data
 }
@@ -50,12 +31,7 @@ export default function Ranking() {
 }
 
 type MovieListingProps = {
-  movie: {
-    id: number
-    titulo: string
-    imagemUrl: string
-    votos: number
-  }
+  movie: MovieData
   total: number
   rank: number
 }
